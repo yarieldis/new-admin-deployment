@@ -1,7 +1,7 @@
 services:
   webapi:
     build:
-      context: .
+      context: ../eregulations-net8/eregulations-4.0-admin-api/Project
       dockerfile: Dockerfile
     ports:
       - "8080:8080"
@@ -14,6 +14,18 @@ services:
       - ConnectionStrings__DefaultConnection=Data Source=mssql;Initial Catalog=${DATABASE_NAME};User Id=sa;Password=${DATABASE_PASSWORD};MultipleActiveResultSets=true;TrustServerCertificate=True
       - ConnectionStrings__GlobalConnection=Data Source=mssql;Initial Catalog=00-dbe-global;User Id=sa;Password=${DATABASE_PASSWORD};MultipleActiveResultSets=true;TrustServerCertificate=True
       - ConnectionStrings__ConsistencyConnection=Data Source=mssql;Initial Catalog=00-dbe-consistency;User Id=sa;Password=${DATABASE_PASSWORD};MultipleActiveResultSets=true;TrustServerCertificate=True
+    networks:
+      - app_network
+
+  spa:
+    build:
+      context: ../angular/eregulations-5.0-admin-spa
+      dockerfile: Dockerfile
+    ports:
+      - "4200:4200"
+    depends_on:
+      webapi:
+        condition: service_started
     networks:
       - app_network
 

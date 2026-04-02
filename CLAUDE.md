@@ -4,13 +4,14 @@ This file provides guidance to Claude Code when working with the **new-admin-dep
 
 ## Repository Overview
 
-**Purpose**: Docker-based deployment configuration for the eRegulations administration platform. Orchestrates a .NET Web API backend with a Microsoft SQL Server 2022 database using Docker Compose.
+**Purpose**: Docker-based deployment configuration for the eRegulations administration platform. Orchestrates an Angular SPA frontend, a .NET Web API backend, and a Microsoft SQL Server 2022 database using Docker Compose.
 
-**Status**: Early development (initial commit)
+**Status**: Early development
 
 **Technology Stack**:
 - Docker / Docker Compose
-- .NET Web API (containerized, built from Dockerfile)
+- Angular 19 SPA (served via nginx)
+- .NET 8 Web API (containerized)
 - Microsoft SQL Server 2022 (Developer edition)
 
 ## Project Structure
@@ -18,13 +19,23 @@ This file provides guidance to Claude Code when working with the **new-admin-dep
 ```
 new-admin-deployment/
 ├── .env                # Environment variables (DB credentials, paths) — DO NOT COMMIT secrets
-├── docker-compose.yml  # Service orchestration (webapi + mssql)
+├── .gitignore          # Git ignore rules
+├── docker-compose.yml  # Service orchestration (spa + webapi + mssql)
 ├── CLAUDE.md           # AI assistant instructions
 ├── AGENTS.md           # Agent configuration
 └── README.md           # Project readme
 ```
 
-> **Note**: A `Dockerfile` for the webapi service is referenced in `docker-compose.yml` but not yet present in the repository.
+### External Source Repositories
+
+The `docker-compose.yml` references Dockerfiles from sibling repositories:
+
+| Service   | Source Repository                                              | Dockerfile |
+|-----------|----------------------------------------------------------------|------------|
+| `webapi`  | `../eregulations-net8/eregulations-4.0-admin-api/Project`     | .NET 8 multi-stage build |
+| `spa`     | `../angular/eregulations-5.0-admin-spa`                       | Angular 19 multi-stage build (nginx) |
+
+Both repositories must be cloned as siblings to this project for `docker compose build` to work.
 
 ## Quick Start
 
@@ -49,8 +60,14 @@ docker compose logs -f
 
 ## Services
 
+### SPA (`spa`)
+- Angular 19 application built with multi-stage Dockerfile (node build + nginx)
+- Served via nginx on port **4200**
+- Health check at `/health` endpoint
+- Depends on `webapi` service being started
+
 ### Web API (`webapi`)
-- Built from local `Dockerfile`
+- .NET 8 Web API built from `../eregulations-net8/eregulations-4.0-admin-api/Project/Dockerfile`
 - Exposed on port **8080**
 - Mounts a host media folder to `/app/media`
 - Connects to 3 MSSQL databases:
@@ -68,7 +85,7 @@ docker compose logs -f
 - Health check: SQL query via `sqlcmd` every 10s (5 retries)
 
 ### Networking
-- Both services communicate over a Docker bridge network (`app_network`)
+- All services communicate over a Docker bridge network (`app_network`)
 
 ## Configuration
 
@@ -87,15 +104,16 @@ docker compose logs -f
 
 ### Docker
 The deployment is fully containerized via `docker-compose.yml`. The stack consists of:
-1. **webapi** — .NET application serving on port 8080
-2. **mssql** — SQL Server 2022 with persistent storage and backup mount
+1. **spa** — Angular 19 SPA served via nginx on port 4200
+2. **webapi** — .NET 8 Web API serving on port 8080
+3. **mssql** — SQL Server 2022 with persistent storage and backup mount
 
 ### Database Restoration
 SQL Server backups can be placed in the `DATABASE_FOLDER` path, which is mounted at `/var/backups` inside the mssql container. Use `sqlcmd` or SSMS to restore from there.
 
 ## Important Notes
 
-- The `Dockerfile` for the webapi service needs to be created or sourced from the application repository.
+- Dockerfiles live in the source repositories, not in this deployment repo.
 - Connection strings use `TrustServerCertificate=True` for internal Docker networking.
 - `MultipleActiveResultSets=true` is enabled on all connections.
 - The mssql container name is hardcoded to `mssql-eregulations-8` — be aware of conflicts if running multiple instances.
@@ -127,5 +145,9 @@ SQL Server backups can be placed in the `DATABASE_FOLDER` path, which is mounted
 - Verify connection strings match the `DATABASE_PASSWORD` and `DATABASE_NAME` in `.env`
 - Check the Docker network: `docker network inspect new-admin-deployment_app_network`
 
+### SPA Won't Build
+- Ensure the Angular source repository is present at the path referenced in `docker-compose.yml`.
+- Check that `node_modules` is excluded via `.dockerignore` in the source repo.
+
 ### Port Conflicts
-- Port 8080 (webapi) or 1433 (mssql) may already be in use. Change mappings in `docker-compose.yml` if needed.
+- Port 4200 (spa), 8080 (webapi), or 1433 (mssql) may already be in use. Change mappings in `docker-compose.yml` if needed.

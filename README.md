@@ -1,18 +1,22 @@
 # new-admin-deployment
 
-Docker Compose deployment configuration for the eRegulations administration platform. Orchestrates a .NET Web API backend with Microsoft SQL Server 2022.
+Docker Compose deployment configuration for the eRegulations administration platform. Orchestrates an Angular SPA frontend, a .NET Web API backend, and Microsoft SQL Server 2022.
 
 ## Services
 
-| Service   | Image / Build        | Port  | Description                        |
-|-----------|----------------------|-------|------------------------------------|
-| `webapi`  | Local `Dockerfile`   | 8080  | .NET Web API application           |
-| `mssql`   | MSSQL Server 2022    | 1433  | SQL Server (Developer edition)     |
+| Service   | Image / Build          | Port  | Description                           |
+|-----------|------------------------|-------|---------------------------------------|
+| `spa`     | Angular 19 + nginx     | 4200  | Admin SPA frontend                    |
+| `webapi`  | .NET 8 Web API         | 8080  | Backend REST API                      |
+| `mssql`   | MSSQL Server 2022      | 1433  | SQL Server (Developer edition)        |
 
 ## Prerequisites
 
 - [Docker](https://docs.docker.com/get-docker/) and Docker Compose
 - `.env` file configured (see below)
+- Sibling source repositories cloned (paths referenced in `docker-compose.yml`):
+  - Web API source repository with Dockerfile
+  - Angular SPA source repository with Dockerfile
 
 ## Configuration
 
@@ -48,7 +52,7 @@ docker compose logs -f
 docker compose down
 ```
 
-The Web API will be available at `http://localhost:8080`.
+The SPA will be available at `http://localhost:4200` and the Web API at `http://localhost:8080`.
 
 ## Database
 
@@ -72,4 +76,5 @@ docker exec -it mssql-eregulations-8 /opt/mssql-tools18/bin/sqlcmd \
 
 - **MSSQL won't start**: Ensure the password meets complexity requirements and Docker has at least 2GB of memory.
 - **Web API can't connect**: Check that the `mssql` container is healthy (`docker compose ps`) and `.env` values are correct.
-- **Port conflicts**: Change port mappings in `docker-compose.yml` if 8080 or 1433 are already in use.
+- **SPA won't build**: Verify the Angular source repo exists at the path referenced in `docker-compose.yml`.
+- **Port conflicts**: Change port mappings in `docker-compose.yml` if 4200, 8080, or 1433 are already in use.
