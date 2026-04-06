@@ -1,80 +1,99 @@
 # new-admin-deployment
 
-Docker Compose deployment configuration for the eRegulations administration platform. Orchestrates an Angular SPA frontend, a .NET Web API backend, and Microsoft SQL Server 2022.
+Multi-tenant Kubernetes deployment for the eRegulations administration platform. Uses Helm to deploy per-tenant Angular SPA + .NET Web API pairs with a shared Microsoft SQL Server 2022 instance on minikube.
 
-## Services
+## Architecture
 
-| Service   | Image / Build          | Port  | Description                           |
-|-----------|------------------------|-------|---------------------------------------|
-| `spa`     | Angular 19 + nginx     | 4200  | Admin SPA frontend                    |
-| `webapi`  | .NET 8 Web API         | 8080  | Backend REST API                      |
-| `mssql`   | MSSQL Server 2022      | 1433  | SQL Server (Developer edition)        |
+```
+minikube cluster
+├── infrastructure namespace
+│   └── MSSQL StatefulSet (shared by all tenants)
+│
+├── tenant-a namespace
+│   ├── SPA Deployment + Service
+│   ├── WebAPI Deployment + Service
+│   └── Ingress (tenant-a.local)
+│
+├── tenant-b namespace
+│   ├── SPA Deployment + Service
+│   ├── WebAPI Deployment + Service
+│   └── Ingress (tenant-b.local)
+│
+└── ... (one namespace per tenant)
+```
 
 ## Prerequisites
 
-- [Docker](https://docs.docker.com/get-docker/) and Docker Compose
-- `.env` file configured (see below)
-- Sibling source repositories cloned (paths referenced in `docker-compose.yml`):
-  - Web API source repository with Dockerfile
-  - Angular SPA source repository with Dockerfile
-
-## Configuration
-
-Create a `.env` file in the project root:
-
-```env
-MEDIA_FOLDER=/path/to/media
-DATABASE_FOLDER=/path/to/sql-backups
-DATABASE_PASSWORD=YourStrongPassword123!
-DATABASE_NAME=your-database-name
-```
-
-| Variable            | Description                                    |
-|---------------------|------------------------------------------------|
-| `MEDIA_FOLDER`      | Host path to media files (mounted in webapi)   |
-| `DATABASE_FOLDER`   | Host path to SQL Server backup files           |
-| `DATABASE_PASSWORD`  | SA password for SQL Server                    |
-| `DATABASE_NAME`     | Name of the main tenant database               |
+- [minikube](https://minikube.sigs.k8s.io/)
+- [Podman](https://podman.io/)
+- [Helm 3](https://helm.sh/)
+- Sibling source repositories cloned:
+  - `../angular/eregulations-5.0-admin-spa` (Angular 19 SPA)
+  - `../eregulations-net8/eregulations-4.0-admin-api/Project` (.NET 8 Web API)
 
 ## Quick Start
 
 ```bash
-# Start the stack
-docker compose up -d
+# 1. Start minikube and deploy shared MSSQL
+./scripts/setup-minikube.sh
 
-# Start with rebuild
-docker compose up -d --build
+# 2. Build container images inside minikube
+./scripts/build-images.sh
 
-# View logs
-docker compose logs -f
-
-# Stop the stack
-docker compose down
+# 3. Deploy a tenant
+./scripts/deploy-tenant.sh tanzania
 ```
 
-The SPA will be available at `http://localhost:4200` and the Web API at `http://localhost:8080`.
+Then add the tenant hostname to your hosts file:
+
+```
+<minikube-ip>  tanzania.local
+```
+
+Get the IP with `minikube ip`.
+
+## Managing Tenants
+
+```bash
+# Deploy or upgrade
+./scripts/deploy-tenant.sh <tenant-name>
+
+# Remove
+./scripts/delete-tenant.sh <tenant-name>
+
+# List all releases
+helm list --all-namespaces
+```
+
+### Adding a New Tenant
+
+1. Copy `tenants/example-tenant.yaml` to `tenants/<name>.yaml`
+2. Set the tenant name, hostname, database name, and password
+3. Run `./scripts/deploy-tenant.sh <name>`
 
 ## Database
 
-The `mssql` service connects to three databases:
+The WebAPI connects to three databases on the shared MSSQL instance:
 
-- **Default** — Main tenant database (name from `DATABASE_NAME`)
+- **Default** — Tenant-specific database (configured per tenant)
 - **Global** — Shared global database (`00-dbe-global`)
 - **Consistency** — Consistency database (`00-dbe-consistency`)
 
 ### Restoring Backups
 
-Place `.bak` files in your `DATABASE_FOLDER` path. They are available inside the container at `/var/backups`. Use `sqlcmd` or SSMS to restore:
-
 ```bash
-docker exec -it mssql-eregulations-8 /opt/mssql-tools18/bin/sqlcmd \
-  -S localhost -U sa -P "$DATABASE_PASSWORD" -C \
-  -Q "RESTORE DATABASE [your-db] FROM DISK = '/var/backups/your-backup.bak' WITH REPLACE"
+# Copy backup into the MSSQL pod
+minikube kubectl -- cp backup.bak infrastructure/mssql-0:/var/opt/mssql/backup.bak
+
+# Restore
+minikube kubectl -- -n infrastructure exec mssql-0 -- /opt/mssql-tools18/bin/sqlcmd \
+  -S localhost -U sa -P "YourPassword" -C \
+  -Q "RESTORE DATABASE [your-db] FROM DISK = '/var/opt/mssql/backup.bak' WITH REPLACE"
 ```
 
 ## Troubleshooting
 
-- **MSSQL won't start**: Ensure the password meets complexity requirements and Docker has at least 2GB of memory.
-- **Web API can't connect**: Check that the `mssql` container is healthy (`docker compose ps`) and `.env` values are correct.
-- **SPA won't build**: Verify the Angular source repo exists at the path referenced in `docker-compose.yml`.
-- **Port conflicts**: Change port mappings in `docker-compose.yml` if 4200, 8080, or 1433 are already in use.
+- **MSSQL won't start**: Check password complexity and minikube memory (`--memory=4096`).
+- **WebAPI can't connect**: Verify tenant password matches `infrastructure/mssql-secret.yaml`.
+- **Ingress not working**: Ensure addon is enabled (`minikube addons list`) and hostname is in your hosts file.
+- **Images not found**: Run `./scripts/build-images.sh` to build inside minikube's container runtime.
