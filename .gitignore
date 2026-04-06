@@ -1,14 +1,13 @@
-# Environment variables
-.env
-
 # Claude Code
 .claude/
 
-# Docker
-docker-compose.override.yml
-
 # Helm
 *.tgz
+charts/
+
+# Kubernetes
+kubeconfig
+*.kubeconfig
 
 # SQL Server backups
 *.bak
