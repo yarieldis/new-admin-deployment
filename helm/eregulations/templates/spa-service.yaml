@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-spa
+  labels:
+    {{- include "eregulations.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.spa.service.type }}
+  ports:
+    - port: {{ .Values.spa.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "eregulations.spa.selectorLabels" . | nindent 4 }}

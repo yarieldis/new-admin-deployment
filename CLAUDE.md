@@ -18,12 +18,30 @@ This file provides guidance to Claude Code when working with the **new-admin-dep
 
 ```
 new-admin-deployment/
-├── .env                # Environment variables (DB credentials, paths) — DO NOT COMMIT secrets
-├── .gitignore          # Git ignore rules
-├── docker-compose.yml  # Service orchestration (spa + webapi + mssql)
-├── CLAUDE.md           # AI assistant instructions
-├── AGENTS.md           # Agent configuration
-└── README.md           # Project readme
+├── .env                   # Environment variables (Docker Compose) — DO NOT COMMIT secrets
+├── .gitignore             # Git ignore rules
+├── docker-compose.yml     # Docker Compose orchestration (legacy single-tenant)
+├── CLAUDE.md              # AI assistant instructions
+├── AGENTS.md              # Agent configuration
+├── README.md              # Project readme
+├── helm/
+│   └── eregulations/      # Helm chart for tenant deployment (spa + webapi)
+│       ├── Chart.yaml
+│       ├── values.yaml    # Default values
+│       └── templates/     # K8s manifest templates
+├── infrastructure/        # Shared infrastructure K8s manifests (MSSQL)
+│   ├── namespace.yaml
+│   ├── mssql-secret.yaml
+│   ├── mssql-service.yaml
+│   └── mssql-statefulset.yaml
+├── tenants/               # Per-tenant Helm value overrides
+│   ├── tanzania.yaml
+│   └── example-tenant.yaml
+└── scripts/               # Helper scripts for minikube workflow
+    ├── setup-minikube.sh
+    ├── build-images.sh
+    ├── deploy-tenant.sh
+    └── delete-tenant.sh
 ```
 
 ### External Source Repositories
@@ -102,14 +120,46 @@ docker compose logs -f
 
 ## Deployment
 
-### Docker
-The deployment is fully containerized via `docker-compose.yml`. The stack consists of:
+### Docker Compose (Single-Tenant / Legacy)
+The `docker-compose.yml` runs a single-tenant stack:
 1. **spa** — Angular 19 SPA served via nginx on port 4200
 2. **webapi** — .NET 8 Web API serving on port 8080
 3. **mssql** — SQL Server 2022 with persistent storage and backup mount
 
+### Kubernetes / Minikube (Multi-Tenant)
+The Helm chart in `helm/eregulations/` deploys one spa+webapi pair per tenant. MSSQL runs as shared infrastructure.
+
+#### Initial Setup
+```bash
+# 1. Start minikube and deploy MSSQL
+./scripts/setup-minikube.sh
+
+# 2. Build images inside minikube's Docker daemon
+./scripts/build-images.sh
+
+# 3. Deploy a tenant
+./scripts/deploy-tenant.sh tanzania
+```
+
+#### Manual Helm Commands
+```bash
+# Deploy/upgrade a tenant
+helm upgrade --install tanzania ./helm/eregulations -n tanzania --create-namespace -f tenants/tanzania.yaml
+
+# List tenant releases
+helm list --all-namespaces
+
+# Remove a tenant
+./scripts/delete-tenant.sh tanzania
+```
+
+#### Architecture
+- **Infrastructure namespace**: Shared MSSQL StatefulSet accessible at `mssql.infrastructure.svc.cluster.local:1433`
+- **Tenant namespaces**: Each tenant gets its own namespace with a spa Deployment, webapi Deployment, Services, and Ingress
+- **Ingress**: Routes `<tenant>.local` to the correct namespace (requires minikube ingress addon)
+
 ### Database Restoration
-SQL Server backups can be placed in the `DATABASE_FOLDER` path, which is mounted at `/var/backups` inside the mssql container. Use `sqlcmd` or SSMS to restore from there.
+SQL Server backups can be placed in the `DATABASE_FOLDER` path, which is mounted at `/var/backups` inside the mssql container (Docker Compose) or copied into the MSSQL pod (Kubernetes). Use `sqlcmd` or SSMS to restore from there.
 
 ## Important Notes
 

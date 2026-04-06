@@ -1,0 +1,16 @@
+eRegulations tenant "{{ include "eregulations.tenantName" . }}" deployed successfully.
+
+Services:
+  - SPA:    {{ .Release.Name }}-spa.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.spa.service.port }}
+  - WebAPI: {{ .Release.Name }}-webapi.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.webapi.service.port }}
+
+Database: {{ .Values.database.name }} on {{ .Values.database.host }}
+
+{{- if .Values.ingress.enabled }}
+
+Ingress:
+  http://{{ .Values.tenant.hostname }}
+
+  Add to your hosts file (or use minikube ip):
+    $(minikube ip)  {{ .Values.tenant.hostname }}
+{{- end }}

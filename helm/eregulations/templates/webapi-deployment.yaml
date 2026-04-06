@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-webapi
+  labels:
+    {{- include "eregulations.labels" . | nindent 4 }}
+    {{- include "eregulations.webapi.selectorLabels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.webapi.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "eregulations.webapi.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "eregulations.webapi.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: webapi
+          image: "{{ .Values.webapi.image.repository }}:{{ .Values.webapi.image.tag }}"
+          imagePullPolicy: {{ .Values.webapi.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: ConnectionStrings__DefaultConnection
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-db-secret
+                  key: connection-default
+            - name: ConnectionStrings__GlobalConnection
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-db-secret
+                  key: connection-global
+            - name: ConnectionStrings__ConsistencyConnection
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-db-secret
+                  key: connection-consistency
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.webapi.resources | nindent 12 }}
+          {{- if .Values.webapi.media.enabled }}
+          volumeMounts:
+            - name: media
+              mountPath: /app/media
+          {{- end }}
+      {{- if .Values.webapi.media.enabled }}
+      volumes:
+        - name: media
+          hostPath:
+            path: {{ .Values.webapi.media.hostPath }}
+            type: DirectoryOrCreate
+      {{- end }}

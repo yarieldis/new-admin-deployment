@@ -1,0 +1,10 @@
+# Tenant: Tanzania
+# Deploy with: helm upgrade --install tanzania ./helm/eregulations -n tanzania --create-namespace -f tenants/tanzania.yaml
+
+tenant:
+  name: tanzania
+  hostname: tanzania.local
+
+database:
+  name: "30-dbe-Tanzania-EF-Test"
+  password: "1qaz.xsw2"    # Must match infrastructure mssql-secret

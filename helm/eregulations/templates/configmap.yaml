@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-config
+  labels:
+    {{- include "eregulations.labels" . | nindent 4 }}
+data:
+  DATABASE_HOST: {{ .Values.database.host | quote }}
+  DATABASE_PORT: {{ .Values.database.port | quote }}
+  DATABASE_NAME: {{ .Values.database.name | quote }}
+  DATABASE_GLOBAL_NAME: {{ .Values.database.globalName | quote }}
+  DATABASE_CONSISTENCY_NAME: {{ .Values.database.consistencyName | quote }}

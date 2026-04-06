@@ -1,0 +1,61 @@
+# Default values for eregulations tenant deployment
+
+# Tenant configuration
+tenant:
+  name: ""         # Override per tenant (e.g., "tanzania")
+  hostname: ""     # Ingress hostname (e.g., "tanzania.local")
+
+# Database configuration
+database:
+  host: mssql.infrastructure.svc.cluster.local
+  port: 1433
+  name: ""                              # Tenant-specific DB (e.g., "30-dbe-Tanzania-EF-Test")
+  globalName: "00-dbe-global"           # Shared global DB
+  consistencyName: "00-dbe-consistency" # Shared consistency DB
+  user: sa
+  password: ""                          # SA password — must match infrastructure secret
+
+# SPA configuration
+spa:
+  replicaCount: 1
+  image:
+    repository: eregulations/spa
+    tag: latest
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 4200
+  resources:
+    requests:
+      cpu: 100m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+
+# WebAPI configuration
+webapi:
+  replicaCount: 1
+  image:
+    repository: eregulations/webapi
+    tag: latest
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8080
+  media:
+    enabled: false
+    hostPath: ""    # Path inside minikube VM (use `minikube mount` for local dirs)
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+# Ingress configuration
+ingress:
+  enabled: true
+  className: nginx
+  annotations: {}

@@ -1,0 +1,20 @@
+# Tenant: Example
+# Copy this file and customize for a new tenant.
+# Deploy with: helm upgrade --install <name> ./helm/eregulations -n <name> --create-namespace -f tenants/<name>.yaml
+
+tenant:
+  name: example
+  hostname: example.local
+
+database:
+  name: "30-dbe-Example"
+  password: ""              # Must match infrastructure mssql-secret
+
+# Optional overrides:
+# spa:
+#   replicaCount: 2
+# webapi:
+#   replicaCount: 2
+#   media:
+#     enabled: true
+#     hostPath: /data/media/example
