@@ -19,9 +19,9 @@ database:
 spa:
   replicaCount: 1
   image:
-    repository: eregulations/spa
+    repository: docker.io/eregulations/spa
     tag: latest
-    pullPolicy: IfNotPresent
+    pullPolicy: Never
   service:
     type: ClusterIP
     port: 4200
@@ -37,9 +37,9 @@ spa:
 webapi:
   replicaCount: 1
   image:
-    repository: eregulations/webapi
+    repository: docker.io/eregulations/webapi
     tag: latest
-    pullPolicy: IfNotPresent
+    pullPolicy: Never
   service:
     type: ClusterIP
     port: 8080

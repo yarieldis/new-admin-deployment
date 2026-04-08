@@ -18,6 +18,10 @@ Write-Host "==> Enabling ingress addon..." -ForegroundColor Cyan
 minikube addons enable ingress
 if ($LASTEXITCODE -ne 0) { throw "Failed to enable ingress addon" }
 
+Write-Host "==> Creating infrastructure namespace..." -ForegroundColor Cyan
+minikube kubectl -- apply -f infrastructure/namespace.yaml
+if ($LASTEXITCODE -ne 0) { throw "Failed to create infrastructure namespace" }
+
 Write-Host "==> Deploying infrastructure (MSSQL)..." -ForegroundColor Cyan
 minikube kubectl -- apply -f infrastructure/
 if ($LASTEXITCODE -ne 0) { throw "Failed to apply infrastructure manifests" }

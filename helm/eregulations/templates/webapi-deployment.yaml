@@ -40,28 +40,26 @@ spec:
                   name: {{ .Release.Name }}-db-secret
                   key: connection-consistency
           livenessProbe:
-            httpGet:
-              path: /health
+            tcpSocket:
               port: http
             initialDelaySeconds: 15
             periodSeconds: 20
           readinessProbe:
-            httpGet:
-              path: /health
+            tcpSocket:
               port: http
             initialDelaySeconds: 10
             periodSeconds: 10
           resources:
             {{- toYaml .Values.webapi.resources | nindent 12 }}
-          {{- if .Values.webapi.media.enabled }}
           volumeMounts:
             - name: media
               mountPath: /app/media
-          {{- end }}
-      {{- if .Values.webapi.media.enabled }}
       volumes:
         - name: media
+          {{- if .Values.webapi.media.enabled }}
           hostPath:
             path: {{ .Values.webapi.media.hostPath }}
             type: DirectoryOrCreate
-      {{- end }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}

@@ -27,17 +27,14 @@ if (-not (Test-Path $WebApiContext -PathType Container)) {
     exit 1
 }
 
-Write-Host "==> Configuring Podman to use minikube's daemon..." -ForegroundColor Cyan
-minikube podman-env --shell powershell | Invoke-Expression
-
 Write-Host "==> Building SPA image..." -ForegroundColor Cyan
-podman build -t eregulations/spa:latest "$SpaContext"
+minikube image build -t eregulations/spa:latest "$SpaContext"
 if ($LASTEXITCODE -ne 0) { throw "SPA image build failed" }
 
 Write-Host "==> Building WebAPI image..." -ForegroundColor Cyan
-podman build -t eregulations/webapi:latest "$WebApiContext"
+minikube image build -t eregulations/webapi:latest "$WebApiContext"
 if ($LASTEXITCODE -ne 0) { throw "WebAPI image build failed" }
 
 Write-Host ""
 Write-Host "==> Images built successfully inside minikube:" -ForegroundColor Green
-podman images | Select-String "eregulations"
+minikube image list | Select-String "eregulations"
