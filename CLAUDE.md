@@ -37,15 +37,15 @@ new-admin-deployment/
 │   ├── tanzania.yaml
 │   └── example-tenant.yaml
 └── scripts/               # Helper scripts for minikube workflow
-    ├── setup-minikube.sh
-    ├── build-images.sh
-    ├── deploy-tenant.sh
-    └── delete-tenant.sh
+    ├── setup-minikube.ps1
+    ├── build-images.ps1
+    ├── deploy-tenant.ps1
+    └── delete-tenant.ps1
 ```
 
 ### External Source Repositories
 
-Container images are built from sibling repositories via `scripts/build-images.sh`:
+Container images are built from sibling repositories via `scripts/build-images.ps1`:
 
 | Service   | Source Repository                                              | Dockerfile |
 |-----------|----------------------------------------------------------------|------------|
@@ -60,18 +60,20 @@ Both repositories must be cloned as siblings to this project for image builds to
 - [minikube](https://minikube.sigs.k8s.io/) installed
 - [Podman](https://podman.io/) installed (used as minikube driver)
 - [Helm 3](https://helm.sh/) installed
+- PowerShell 5.1+ (included with Windows) or [PowerShell 7+](https://github.com/PowerShell/PowerShell)
+- Execution policy allowing local scripts: `Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned`
 - Sibling source repositories cloned (see External Source Repositories)
 
 ### Running the Stack
-```bash
+```powershell
 # 1. Start minikube and deploy shared MSSQL
-./scripts/setup-minikube.sh
+.\scripts\setup-minikube.ps1
 
 # 2. Build container images inside minikube
-./scripts/build-images.sh
+.\scripts\build-images.ps1
 
 # 3. Deploy a tenant
-./scripts/deploy-tenant.sh tanzania
+.\scripts\deploy-tenant.ps1 -TenantName tanzania
 ```
 
 ## Services
@@ -117,27 +119,27 @@ Each tenant is configured via a YAML file in `tenants/` (see `tenants/example-te
 
 ### MSSQL Secret
 
-Edit `infrastructure/mssql-secret.yaml` and set the `sa-password` value before running `setup-minikube.sh`. The password must match the `database.password` in your tenant value files.
+Edit `infrastructure/mssql-secret.yaml` and set the `sa-password` value before running `setup-minikube.ps1`. The password must match the `database.password` in your tenant value files.
 
 ## Deployment
 
 ### Initial Setup
-```bash
-./scripts/setup-minikube.sh
-./scripts/build-images.sh
-./scripts/deploy-tenant.sh tanzania
+```powershell
+.\scripts\setup-minikube.ps1
+.\scripts\build-images.ps1
+.\scripts\deploy-tenant.ps1 -TenantName tanzania
 ```
 
 ### Manual Helm Commands
-```bash
+```powershell
 # Deploy/upgrade a tenant
-helm upgrade --install tanzania ./helm/eregulations -n tanzania --create-namespace -f tenants/tanzania.yaml
+helm upgrade --install tanzania .\helm\eregulations -n tanzania --create-namespace -f tenants\tanzania.yaml
 
 # List tenant releases
 helm list --all-namespaces
 
 # Remove a tenant
-./scripts/delete-tenant.sh tanzania
+.\scripts\delete-tenant.ps1 -TenantName tanzania
 ```
 
 ### Architecture
@@ -147,10 +149,10 @@ helm list --all-namespaces
 
 ### Database Restoration
 Copy `.bak` files into the MSSQL pod and use `sqlcmd` to restore:
-```bash
+```powershell
 minikube kubectl -- cp backup.bak infrastructure/mssql-0:/var/opt/mssql/backup.bak
-minikube kubectl -- -n infrastructure exec mssql-0 -- /opt/mssql-tools18/bin/sqlcmd \
-  -S localhost -U sa -P "YourPassword" -C \
+minikube kubectl -- -n infrastructure exec mssql-0 -- /opt/mssql-tools18/bin/sqlcmd `
+  -S localhost -U sa -P "YourPassword" -C `
   -Q "RESTORE DATABASE [your-db] FROM DISK = '/var/opt/mssql/backup.bak' WITH REPLACE"
 ```
 

@@ -27,21 +27,23 @@ minikube cluster
 - [minikube](https://minikube.sigs.k8s.io/)
 - [Podman](https://podman.io/)
 - [Helm 3](https://helm.sh/)
+- PowerShell 5.1+ (included with Windows) or [PowerShell 7+](https://github.com/PowerShell/PowerShell)
+- Execution policy allowing local scripts: `Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned`
 - Sibling source repositories cloned:
   - `../angular/eregulations-5.0-admin-spa` (Angular 19 SPA)
   - `../eregulations-net8/eregulations-4.0-admin-api/Project` (.NET 8 Web API)
 
 ## Quick Start
 
-```bash
+```powershell
 # 1. Start minikube and deploy shared MSSQL
-./scripts/setup-minikube.sh
+.\scripts\setup-minikube.ps1
 
 # 2. Build container images inside minikube
-./scripts/build-images.sh
+.\scripts\build-images.ps1
 
 # 3. Deploy a tenant
-./scripts/deploy-tenant.sh tanzania
+.\scripts\deploy-tenant.ps1 -TenantName tanzania
 ```
 
 Then add the tenant hostname to your hosts file:
@@ -54,12 +56,12 @@ Get the IP with `minikube ip`.
 
 ## Managing Tenants
 
-```bash
+```powershell
 # Deploy or upgrade
-./scripts/deploy-tenant.sh <tenant-name>
+.\scripts\deploy-tenant.ps1 -TenantName <tenant-name>
 
 # Remove
-./scripts/delete-tenant.sh <tenant-name>
+.\scripts\delete-tenant.ps1 -TenantName <tenant-name>
 
 # List all releases
 helm list --all-namespaces
@@ -69,7 +71,7 @@ helm list --all-namespaces
 
 1. Copy `tenants/example-tenant.yaml` to `tenants/<name>.yaml`
 2. Set the tenant name, hostname, database name, and password
-3. Run `./scripts/deploy-tenant.sh <name>`
+3. Run `.\scripts\deploy-tenant.ps1 -TenantName <name>`
 
 ## Database
 
@@ -81,13 +83,13 @@ The WebAPI connects to three databases on the shared MSSQL instance:
 
 ### Restoring Backups
 
-```bash
+```powershell
 # Copy backup into the MSSQL pod
 minikube kubectl -- cp backup.bak infrastructure/mssql-0:/var/opt/mssql/backup.bak
 
 # Restore
-minikube kubectl -- -n infrastructure exec mssql-0 -- /opt/mssql-tools18/bin/sqlcmd \
-  -S localhost -U sa -P "YourPassword" -C \
+minikube kubectl -- -n infrastructure exec mssql-0 -- /opt/mssql-tools18/bin/sqlcmd `
+  -S localhost -U sa -P "YourPassword" -C `
   -Q "RESTORE DATABASE [your-db] FROM DISK = '/var/opt/mssql/backup.bak' WITH REPLACE"
 ```
 
@@ -96,4 +98,4 @@ minikube kubectl -- -n infrastructure exec mssql-0 -- /opt/mssql-tools18/bin/sql
 - **MSSQL won't start**: Check password complexity and minikube memory (`--memory=4096`).
 - **WebAPI can't connect**: Verify tenant password matches `infrastructure/mssql-secret.yaml`.
 - **Ingress not working**: Ensure addon is enabled (`minikube addons list`) and hostname is in your hosts file.
-- **Images not found**: Run `./scripts/build-images.sh` to build inside minikube's container runtime.
+- **Images not found**: Run `.\scripts\build-images.ps1` to build inside minikube's container runtime.
